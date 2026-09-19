@@ -1,0 +1,27 @@
+{
+  "title": "Я не могу насытиться развратными разговорами Аой-куна",
+  "artist": "Mika0924",
+  "author": "Mika0924",
+  "description": "Сборник глав перевода.",
+  "covers": [
+    "https://raw.githubusercontent.com/Mika0924/Aoi-kun-s-Explicit-Dialogue-Collection/main/cover.jpg"
+  ],
+  "chapters": {
+    "10": {
+      "title": "Десятая глава",
+      "volume": "1",
+      "groups": {
+        "Перевод": "https://raw.githubusercontent.com/Mika0924/Aoi-kun-s-Explicit-Dialogue-Collection/main/10%20глава/"
+      },
+      "pages": 31
+    },
+    "9": {
+      "title": "Девятая глава",
+      "volume": "1",
+      "groups": {
+        "Перевод": "https://raw.githubusercontent.com/Mika0924/Aoi-kun-s-Explicit-Dialogue-Collection/main/9%20глава/"
+      },
+      "pages": 31
+    }
+  }
+}
