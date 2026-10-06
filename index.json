@@ -1,48 +1,90 @@
-from pathlib import Path
-from urllib.parse import quote
-import json
+const fs = require("fs");
+const path = require("path");
 
-BASE_URL = (
-    "https://raw.githubusercontent.com/"
-    "Mika0924/Aoi-kun-s-Explicit-Dialogue-Collection/main"
-)
+const ROOT = __dirname;
+const OUTPUT = path.join(ROOT, "index.json");
 
-# Настройки глав: первая и последняя страница в имени файла.
-# Если файлы главы называются 01.jpg, 02.jpg ... укажите start=1.
-CHAPTERS = {
-    1: {"start": 8, "end": 39, "title": "Первая глава"},
-    2: {"start": 40, "end": 71, "title": "Вторая глава"},
-    9: {"start": 1, "end": 31, "title": "Девятая глава"},
-    10: {"start": 1, "end": 31, "title": "Десятая глава"},
+const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+
+function naturalSort(a, b) {
+  return a.localeCompare(b, undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
 }
 
-MANIFEST = {
-    "title": "Я не могу насытиться развратными разговорами Аой-куна",
-    "artist": "Mika0924",
-    "author": "Mika0924",
-    "description": "Сборник глав перевода.",
-    "cover": f"{BASE_URL}/cover.jpg",
-    "chapters": {},
+function getImageFiles(folderPath) {
+  return fs
+    .readdirSync(folderPath, { withFileTypes: true })
+    .filter(
+      (item) =>
+        item.isFile() &&
+        IMAGE_EXTENSIONS.includes(path.extname(item.name).toLowerCase())
+    )
+    .map((item) => item.name)
+    .sort(naturalSort);
 }
 
-for chapter_number, settings in CHAPTERS.items():
-    # Сохраняем русское название папки и кодируем пробелы/кириллицу для URL.
-    folder = quote(f"{chapter_number} глава", safe="")
-    images = [
-        f"{BASE_URL}/{folder}/{page:02d}.jpg"
-        for page in range(settings["start"], settings["end"] + 1)
-    ]
-    MANIFEST["chapters"][str(chapter_number)] = {
-        "title": settings["title"],
-        "volume": "1",
-        "groups": {"Перевод": images},
-    }
+function getChapterFolders() {
+  return fs
+    .readdirSync(ROOT, { withFileTypes: true })
+    .filter((item) => {
+      if (!item.isDirectory()) return false;
+      if (item.name.startsWith(".")) return false;
+      if (item.name === "node_modules") return false;
 
-output = Path(__file__).with_name("manifest.json")
-output.write_text(
-    json.dumps(MANIFEST, ensure_ascii=False, indent=2) + "\n",
-    encoding="utf-8",
-)
-print(f"Готово: {output}")
-print(f"Глав создано: {len(MANIFEST['chapters'])}")
-print(f"Всего страниц: {sum(len(c['groups']['Перевод']) for c in MANIFEST['chapters'].values())}")
+      return /^\d+/.test(item.name);
+    })
+    .sort((a, b) => naturalSort(a.name, b.name));
+}
+
+function encodePathPart(value) {
+  return encodeURIComponent(value).replace(/%2F/g, "/");
+}
+
+const repoUrl =
+  process.env.REPO_URL ||
+  "https://raw.githubusercontent.com/Mika0924/Aoi-kun-s-Explicit-Dialogue-Collection/main";
+
+const chapters = {};
+
+for (const folder of getChapterFolders()) {
+  const folderPath = path.join(ROOT, folder.name);
+  const images = getImageFiles(folderPath);
+
+  if (images.length === 0) {
+    console.log(`Пропущена папка без изображений: ${folder.name}`);
+    continue;
+  }
+
+  const chapterNumber = folder.name.match(/^\d+/)[0];
+
+  chapters[chapterNumber] = {
+    title: folder.name,
+    volume: "1",
+    groups: {
+      Перевод: images.map(
+        (image) =>
+          `${repoUrl}/${encodePathPart(folder.name)}/${encodePathPart(image)}`
+      ),
+    },
+  };
+
+  console.log(
+    `Глава ${chapterNumber}: найдено ${images.length} изображений`
+  );
+}
+
+const index = {
+  title: "Я не могу насытиться развратными разговорами Аой-куна",
+  artist: "Mika0924",
+  author: "Mika0924",
+  description: "Сборник глав перевода.",
+  cover: `${repoUrl}/cover.jpg`,
+  chapters,
+};
+
+fs.writeFileSync(OUTPUT, JSON.stringify(index, null, 2) + "\n", "utf8");
+
+console.log(`\nindex.json обновлён.`);
+console.log(`Глав найдено: ${Object.keys(chapters).length}`);
